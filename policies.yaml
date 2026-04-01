@@ -1,0 +1,72 @@
+version: "1.0"
+policies:
+  - id: "no_prod_delete"
+    name: "No File Deletion in Production"
+    description: "Blocks file deletions when environment is production"
+    enabled: true
+    rule:
+      type: "tool_match"
+      tool: "file.delete"
+      condition:
+        field: "context.environment"
+        operator: "equals"
+        value: "production"
+    action: "block"
+    severity: "critical"
+    notify: ["slack"]
+    
+  - id: "no_drop_table"
+    name: "No DROP TABLE Statements"
+    description: "Blocks SQL that drops tables"
+    enabled: true
+    rule:
+      type: "content_match"
+      tool: "db.query"
+      pattern: "(?i)DROP\\s+TABLE"
+    action: "block"
+    severity: "critical"
+    notify: ["slack"]
+    
+  - id: "no_api_key_exposure"
+    name: "No API Key Exposure"
+    description: "Prevents API keys in logs or output"
+    enabled: true
+    rule:
+      type: "content_match"
+      tool: "*"
+      pattern: "(sk-|pk-|ghp-|AKIA)[a-zA-Z0-9]{16,}"
+    action: "block"
+    severity: "critical"
+    notify: ["slack"]
+    
+  - id: "no_prod_deploy_without_approval"
+    name: "No Production Deploy Without Approval"
+    description: "Requires approval for production deployments"
+    enabled: true
+    rule:
+      type: "tool_match"
+      tool: "deploy.execute"
+      condition:
+        field: "context.environment"
+        operator: "equals"
+        value: "production"
+    action: "escalate"
+    severity: "high"
+    notify: ["slack"]
+    timeout: 300
+    
+  - id: "no_large_sql_without_approval"
+    name: "No Large SQL Without Approval"
+    description: "Requires approval for SQL affecting >10k rows"
+    enabled: true
+    rule:
+      type: "tool_match"
+      tool: "db.query"
+      condition:
+        field: "context.estimated_rows"
+        operator: "greater_than"
+        value: 10000
+    action: "escalate"
+    severity: "medium"
+    notify: ["slack"]
+    timeout: 300
