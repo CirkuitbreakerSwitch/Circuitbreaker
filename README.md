@@ -116,6 +116,19 @@ API Reference
 🧪 Testing
 python -m pytest tests/ -v
 
+## 🔌 Community Integrations
+
+Built an integration? Submit a PR!
+
+| Integration | Author | Status |
+|-------------|--------|--------|
+| Cursor | Official | ✅ |
+| LangChain | Official | ✅ |
+| OpenAI Functions | Official | ✅ |
+| Your Integration | You | 🔄 [Submit PR](https://github.com/CirkuitbreakerSwitch/Circuitbreaker/pulls) |
+
+See `examples/` folder for integration patterns.
+
 🤝 Contributing
 PRs welcome! See GitHub issues for ideas.
 
