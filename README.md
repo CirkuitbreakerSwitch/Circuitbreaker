@@ -19,10 +19,36 @@ CircuitBreaker is a real-time intervention layer that prevents AI agents from ca
 
 ## ✅ The Solution
 
+Here's the complete updated README.md with LLM Judge highlighted:
+Markdown
+Copy
+Code
+Preview
+# CircuitBreaker ⛔
+
+**The seatbelt for AI agents**
+
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)]()
+[![Python](https://img.shields.io/badge/python-3.11+-blue)]()
+[![License](https://img.shields.io/badge/license-MIT-green)]()
+
+CircuitBreaker is a real-time intervention layer that prevents AI agents from causing catastrophic damage. It sits between your AI agents and their tools, evaluating every action in milliseconds.
+
+> "33% of organizations deployed AI agents. 97% admit they lack proper controls."
+
+## 🚨 The Problem
+
+- Replit's AI deleted live production databases
+- Tea app exposed private data due to unverified AI-generated security
+- Browser agents operate at "Level 4-5 autonomy" with zero guardrails
+- Existing solutions take 5 weeks to procure, not 5 minutes to set up
+
+## ✅ The Solution
+
 AI Agent Decision → CIRCUITBREAKER → Tool Execution
 ↓
 Risk Evaluation
-(heuristics + LLM judge)
+(heuristics + LLM Judge)
 ↓
 Block / Escalate / Allow
 
@@ -34,12 +60,14 @@ Block / Escalate / Allow
 - **Agent-agnostic** - Works with Cursor, Claude Code, LangChain, OpenAI
 - **5 default guardrails** - Production-ready out of the box
 - **Rate limiting** - DDoS protection from runaway agents
+- **AI-powered risk analysis** - LLM Judge catches patterns heuristics miss
 - **Full audit trail** - Every decision logged to PostgreSQL
 - **Real-time metrics** - Health checks and performance monitoring
 - **Multiple notifications** - Slack, Email, Webhooks
 - **CLI tool** - Easy management and monitoring
 - **Docker support** - Production deployment ready
 - **Open source** - MIT licensed, community-driven
+- **Compliance ready** - Audit export (CSV/JSON), security policy, SOC 2 roadmap
 
 ## 🚀 Quick Start
 
@@ -64,14 +92,16 @@ else:
 
 
 🛡️ Default Guardrails
-| Policy                | Action   | Description                        |
-| --------------------- | -------- | ---------------------------------- |
-| `no_prod_delete`      | Block    | No file deletion in production     |
-| `no_drop_table`       | Block    | No SQL DROP TABLE statements       |
-| `no_api_key_exposure` | Block    | Prevents API keys in output        |
-| `no_prod_deploy`      | Escalate | Production deploys need approval   |
-| `no_large_sql`        | Escalate | Large SQL operations need approval |
-| `rate_limit`          | Block    | 100 requests/minute per user       |
+| Policy                | Action   | Description                           |
+| --------------------- | -------- | ------------------------------------- |
+| `no_prod_delete`      | Block    | No file deletion in production        |
+| `no_drop_table`       | Block    | No SQL DROP TABLE statements          |
+| `no_api_key_exposure` | Block    | Prevents API keys in output           |
+| `no_prod_deploy`      | Escalate | Production deploys need approval      |
+| `no_large_sql`        | Escalate | Large SQL operations need approval    |
+| `rate_limit`          | Block    | 100 requests/minute per user          |
+| `llm_judge`           | Varies   | AI analysis for novel attack patterns |
+
 
 📊 Architecture
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
@@ -92,7 +122,24 @@ else:
          │ Metrics│  │ Slack  │  │ Email  │
          │        │  │        │  │        │
          └────────┘  └────────┘  └────────┘
+              │
+         ┌────▼────┐
+         │LLM Judge│  ← AI-powered analysis
+         │(OpenAI) │
+         └─────────┘
 
+
+🔌 Community Integrations
+Built an integration? Submit a PR!
+
+| Integration      | Author   | Status                                                                       |
+| ---------------- | -------- | ---------------------------------------------------------------------------- |
+| Cursor           | Official | ✅                                                                            |
+| LangChain        | Official | ✅                                                                            |
+| OpenAI Functions | Official | ✅                                                                            |
+| Your Integration | You      | 🔄 [Submit PR](https://github.com/CirkuitbreakerSwitch/Circuitbreaker/pulls) |
+
+See examples/ folder for integration patterns.
 
 🔧 Integrations
 Cursor - examples/cursor_integration.py
@@ -100,14 +147,18 @@ LangChain - examples/langchain_integration.py
 OpenAI Functions - examples/openai_integration.py
 
 🐳 Docker
+   
 docker-compose up -d
 
 📟 CLI
+
 cb status      # System status
 cb metrics     # Performance metrics
 cb health      # Health check (JSON)
 cb test        # Test evaluation
 cb config      # Show configuration
+cb export --format summary --days 30    # Compliance report
+cb export --format csv --output audit.csv  # Export to CSV
 
 📚 Documentation
 Installation Guide
@@ -116,24 +167,10 @@ API Reference
 🧪 Testing
 python -m pytest tests/ -v
 
-## 🔌 Community Integrations
-
-Built an integration? Submit a PR!
-
-| Integration | Author | Status |
-|-------------|--------|--------|
-| Cursor | Official | ✅ |
-| LangChain | Official | ✅ |
-| OpenAI Functions | Official | ✅ |
-| Your Integration | You | 🔄 [Submit PR](https://github.com/CirkuitbreakerSwitch/Circuitbreaker/pulls) |
-
-See `examples/` folder for integration patterns.
-
 🤝 Contributing
 PRs welcome! See GitHub issues for ideas.
-
 📄 License
-    MIT
+MIT
 
 Ready to protect your AI agents? Get started →
 
@@ -143,7 +180,6 @@ Ready to protect your AI agents? Get started →
 
 ```bash
 git add README.md
-git commit -m "Update README with all new features: rate limiting, metrics, CLI, Docker, webhooks, email"
+git commit -m "Highlight LLM Judge - AI-powered risk analysis as key differentiator"
 git push origin master
-
 
