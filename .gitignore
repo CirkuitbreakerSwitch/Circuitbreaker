@@ -1,11 +1,18 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Virtual environments
 env/
 venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
 .env
 
 # IDE
@@ -13,6 +20,7 @@ venv/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -31,3 +39,21 @@ node_modules/
 .next/
 dist/
 build/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
