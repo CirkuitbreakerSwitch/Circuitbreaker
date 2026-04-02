@@ -2,10 +2,12 @@
 Policy Engine - Loads and evaluates policies
 """
 
-from typing import Dict, Any, Optional
+import re
 import yaml
 import os
-import re
+from typing import Dict, Any, Optional
+
+from .rate_limiter import RateLimiter, RateLimit
 
 
 class PolicyEngine:
@@ -17,6 +19,10 @@ class PolicyEngine:
         self.policies = []
         self.policies_path = policies_path or self._default_policies_path()
         self._load_policies()
+        
+        # Initialize rate limiter
+        self.rate_limiter = RateLimiter()
+        self.default_rate_limit = RateLimit(max_requests=100, window_seconds=60)
     
     def _default_policies_path(self) -> str:
         """Get default policies file path"""
@@ -63,6 +69,16 @@ class PolicyEngine:
         Returns:
             Dict with 'action' (allow/block/escalate) and 'reason'
         """
+        # Check rate limits first
+        rate_result = self.rate_limiter.check(context, self.default_rate_limit)
+        if not rate_result["allowed"]:
+            return {
+                "action": "block",
+                "reason": f"Rate limit exceeded. Retry after {rate_result['retry_after']}s",
+                "policy_id": "rate_limit",
+                "severity": "high"
+            }
+        
         tool = context.get("tool", "")
         params = context.get("params", {})
         environment = context.get("environment", "development")
