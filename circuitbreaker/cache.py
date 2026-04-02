@@ -58,9 +58,13 @@ class PolicyCache:
             
             if data:
                 result = json.loads(data)
-                result['cache_hit'] = True
-                result['cache_time_ms'] = elapsed
-                return result
+                # Return only fields that CircuitBreakerResult expects
+                return {
+                    "allowed": result.get("allowed"),
+                    "action": result.get("action"),
+                    "reason": result.get("reason"),
+                    "risk_level": result.get("risk_level")
+                }
             
             return None
             
@@ -83,7 +87,7 @@ class PolicyCache:
         
         try:
             # Don't cache escalate actions (they need fresh evaluation)
-            if result.get('action') == 'escalate':
+            if result.get("action") == "escalate":
                 return False
             
             data = json.dumps(result)
