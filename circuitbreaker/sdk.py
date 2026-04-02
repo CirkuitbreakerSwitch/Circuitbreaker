@@ -17,6 +17,7 @@ from .config import Config
 from .notifier import NotificationDispatcher
 from .metrics import get_metrics
 from .webhooks import WebhookDispatcher
+from .email_notifier import EmailNotifier
 
 
 @dataclass
@@ -61,6 +62,16 @@ class CircuitBreaker:
         webhook_url = os.getenv("WEBHOOK_URL")
         if webhook_url:
             self.webhooks.add_endpoint(webhook_url)
+        
+        # Initialize email notifier
+        self.email = EmailNotifier(
+            smtp_server=os.getenv("SMTP_SERVER"),
+            smtp_port=int(os.getenv("SMTP_PORT", "587")),
+            username=os.getenv("SMTP_USERNAME"),
+            password=os.getenv("SMTP_PASSWORD"),
+            from_addr=os.getenv("EMAIL_FROM"),
+            to_addrs=os.getenv("EMAIL_TO", "").split(",") if os.getenv("EMAIL_TO") else []
+        )
         
         self.config = {
             "redis_url": self.redis_url,
@@ -218,6 +229,21 @@ class CircuitBreaker:
                 "allowed": allowed
             }
         }, event_type=action)
+        
+        # Send email for blocks and escalations
+        if action in ["block", "escalate"]:
+            self.email.send({
+                "request_id": request_id,
+                "tool": tool,
+                "params": params,
+                "context": eval_context,
+                "result": {
+                    "action": action,
+                    "reason": policy_result["reason"],
+                    "risk_level": risk_result["level"]
+                },
+                "timestamp": time.time()
+            })
         
         return result
     
