@@ -8,13 +8,12 @@
 
 CircuitBreaker is a real-time intervention layer that prevents AI agents from causing catastrophic damage. It sits between your AI agents and their tools, evaluating every action in milliseconds.
 
-&gt; "33% of organizations deployed AI agents. 97% admit they lack proper controls."  
-&gt; — Recent industry survey
+&gt; "33% of organizations deployed AI agents. 97% admit they lack proper controls."
 
 ## 🚨 The Problem
 
 - Replit's AI deleted live production databases
-- Tea app exposed women's private data due to unverified AI-generated security
+- Tea app exposed private data due to unverified AI-generated security
 - Browser agents operate at "Level 4-5 autonomy" with zero guardrails
 - Existing solutions take 5 weeks to procure, not 5 minutes to set up
 
@@ -32,10 +31,14 @@ Block / Escalate / Allow
 
 - **Millisecond-level intervention** - Sub-10ms with Redis cache
 - **5-minute setup** - Not 5-week procurement
-- **Agent-agnostic** - Works with Cursor, Claude Code, LangChain, custom agents
+- **Agent-agnostic** - Works with Cursor, Claude Code, LangChain, OpenAI
 - **5 default guardrails** - Production-ready out of the box
+- **Rate limiting** - DDoS protection from runaway agents
 - **Full audit trail** - Every decision logged to PostgreSQL
-- **Slack integration** - Human-in-the-loop for escalations
+- **Real-time metrics** - Health checks and performance monitoring
+- **Multiple notifications** - Slack, Email, Webhooks
+- **CLI tool** - Easy management and monitoring
+- **Docker support** - Production deployment ready
 - **Open source** - MIT licensed, community-driven
 
 ## 🚀 Quick Start
@@ -68,34 +71,66 @@ else:
 | `no_api_key_exposure` | Block    | Prevents API keys in output        |
 | `no_prod_deploy`      | Escalate | Production deploys need approval   |
 | `no_large_sql`        | Escalate | Large SQL operations need approval |
-
+| `rate_limit`          | Block    | 100 requests/minute per user       |
 
 📊 Architecture
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
 │  AI Agent   │────▶│ CircuitBreaker│────▶│   Tool      │
-│  (Cursor)   │     │    SDK        │     │ Execution   │
+│  (Any)      │     │    SDK        │     │ Execution   │
 └─────────────┘     └──────┬───────┘     └─────────────┘
                            │
-              ┌────────────┼────────────┐
-              │            │            │
-         ┌────▼────┐  ┌────▼────┐  ┌────▼────┐
-         │  Redis  │  │ Policy  │  │PostgreSQL│
-         │  Cache  │  │ Engine  │  │  Audit   │
-         └─────────┘  └─────────┘  └─────────┘
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+   ┌────▼────┐       ┌────▼────┐       ┌────▼────┐
+   │  Redis  │       │ Policy  │       │PostgreSQL│
+   │  Cache  │       │ Engine  │       │  Audit   │
+   └─────────┘       └────┬────┘       └─────────┘
+                          │
+              ┌───────────┼───────────┐
+              │           │           │
+         ┌────▼───┐  ┌───▼────┐  ┌───▼────┐
+         │ Metrics│  │ Slack  │  │ Email  │
+         │        │  │        │  │        │
+         └────────┘  └────────┘  └────────┘
 
-🔧 Configuration
-## 🔧 Optional Configuration
 
-CircuitBreaker works out of the box with sensible defaults. For production use, configure:
+🔧 Integrations
+Cursor - examples/cursor_integration.py
+LangChain - examples/langchain_integration.py
+OpenAI Functions - examples/openai_integration.py
+
+🐳 Docker
+docker-compose up -d
+
+📟 CLI
+cb status      # System status
+cb metrics     # Performance metrics
+cb health      # Health check (JSON)
+cb test        # Test evaluation
+cb config      # Show configuration
+
+📚 Documentation
+Installation Guide
+API Reference
+
+🧪 Testing
+python -m pytest tests/ -v
+
+🤝 Contributing
+PRs welcome! See GitHub issues for ideas.
+
+📄 License
+    MIT
+
+Ready to protect your AI agents? Get started →
+
+---
+
+**Save and commit:**
 
 ```bash
-# Optional: Redis for caching (faster evaluations)
-REDIS_URL=redis://your-upstash-url
-REDIS_TOKEN=your-token
+git add README.md
+git commit -m "Update README with all new features: rate limiting, metrics, CLI, Docker, webhooks, email"
+git push origin master
 
-# Optional: PostgreSQL for audit logging
-DATABASE_URL=postgresql://your-neon-url
-
-# Optional: Slack for notifications
-SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 
