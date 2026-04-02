@@ -5,6 +5,8 @@ Risk Evaluator - Evaluates risk of tool calls
 import re
 from typing import Dict, Any
 
+from .llm_judge import LLMJudge
+
 
 class RiskEvaluator:
     """
@@ -32,6 +34,7 @@ class RiskEvaluator:
     
     def __init__(self, use_llm_judge: bool = False):
         self.use_llm_judge = use_llm_judge
+        self.llm_judge = LLMJudge() if use_llm_judge else None
     
     def evaluate(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -80,13 +83,25 @@ class RiskEvaluator:
         else:
             level = "low"
         
-        return {
+        heuristic_result = {
             "level": level,
             "score": risk_score,
             "factors": factors,
             "tool": tool,
-            "environment": environment
+            "environment": environment,
+            "source": "heuristic"
         }
+        
+        # Escalate to LLM judge for ambiguous cases
+        if self.llm_judge and self.llm_judge.should_escalate_to_llm(heuristic_result):
+            llm_result = self.llm_judge.evaluate(context)
+            if llm_result:
+                # Use LLM result if higher risk
+                risk_levels = ["low", "medium", "high", "critical"]
+                if risk_levels.index(llm_result["level"]) > risk_levels.index(level):
+                    return llm_result
+        
+        return heuristic_result
     
     def should_escalate_to_llm(self, risk_result: Dict[str, Any]) -> bool:
         """
@@ -94,7 +109,7 @@ class RiskEvaluator:
         
         Heuristics handle 90% of cases - LLM only for edge cases
         """
-        if not self.use_llm_judge:
+        if not self.use_llm_judge or not self.llm_judge:
             return False
         
         # Escalate to LLM if:
