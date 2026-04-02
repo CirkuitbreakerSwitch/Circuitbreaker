@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  circuitbreaker:
+    build: .
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/circuitbreaker
+      - ENVIRONMENT=production
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./policies.yaml:/app/policies.yaml:ro
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=circuitbreaker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  redis_data:
+  postgres_data:
