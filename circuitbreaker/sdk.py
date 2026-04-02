@@ -2,6 +2,7 @@
 CircuitBreaker SDK - Main entry point
 """
 
+import os
 import time
 import uuid
 from typing import Dict, Any, Optional, Callable
@@ -15,6 +16,7 @@ from .cache import PolicyCache, NullCache
 from .config import Config
 from .notifier import NotificationDispatcher
 from .metrics import get_metrics
+from .webhooks import WebhookDispatcher
 
 
 @dataclass
@@ -54,6 +56,12 @@ class CircuitBreaker:
         self.cache = PolicyCache(self.redis_url, Config.REDIS_TOKEN) if self.redis_url else NullCache()
         self.notifier = NotificationDispatcher(self.slack_webhook, Config.SLACK_BOT_TOKEN)
         
+        # Initialize webhooks
+        self.webhooks = WebhookDispatcher()
+        webhook_url = os.getenv("WEBHOOK_URL")
+        if webhook_url:
+            self.webhooks.add_endpoint(webhook_url)
+        
         self.config = {
             "redis_url": self.redis_url,
             "database_url": self.database_url,
@@ -90,6 +98,22 @@ class CircuitBreaker:
                 execution_time_ms=result.execution_time_ms,
                 cache_hit=True
             )
+            
+            # Send webhook for cache hit
+            self.webhooks.dispatch({
+                "request_id": request_id,
+                "tool": tool,
+                "params": params,
+                "context": {"environment": context.environment},
+                "result": {
+                    "action": result.action,
+                    "reason": result.reason,
+                    "risk_level": result.risk_level,
+                    "allowed": result.allowed,
+                    "cache_hit": True
+                }
+            }, event_type="cache_hit")
+            
             return result
         
         # Build evaluation context
@@ -180,6 +204,20 @@ class CircuitBreaker:
                 },
                 channels=["slack", "console"]
             )
+        
+        # Send webhook for all actions
+        self.webhooks.dispatch({
+            "request_id": request_id,
+            "tool": tool,
+            "params": params,
+            "context": eval_context,
+            "result": {
+                "action": action,
+                "reason": policy_result["reason"],
+                "risk_level": risk_result["level"],
+                "allowed": allowed
+            }
+        }, event_type=action)
         
         return result
     
