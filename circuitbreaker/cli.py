@@ -37,6 +37,14 @@ def main():
     # Config command
     config_parser = subparsers.add_parser("config", help="Show configuration")
     
+    # Export command
+    export_parser = subparsers.add_parser("export", help="Export audit logs")
+    export_parser.add_argument("--format", choices=["csv", "json", "summary"], 
+                              default="summary", help="Export format")
+    export_parser.add_argument("--days", type=int, default=30, 
+                              help="Number of days to export")
+    export_parser.add_argument("--output", "-o", help="Output file")
+    
     args = parser.parse_args()
     
     if args.command == "status":
@@ -49,6 +57,8 @@ def main():
         cmd_test(args.tool, args.env)
     elif args.command == "config":
         cmd_config()
+    elif args.command == "export":
+        cmd_export(args.format, args.days, args.output)
     else:
         parser.print_help()
 
@@ -147,6 +157,53 @@ def cmd_config():
     print("\n" + "=" * 60)
     print("Note: Use .env file to configure these settings")
     print("=" * 60)
+
+
+def cmd_export(format_type: str, days: int, output: Optional[str]):
+    """Export audit logs"""
+    print("=" * 60)
+    print("AUDIT EXPORT")
+    print("=" * 60)
+    
+    from .audit_export import AuditExporter
+    from .config import Config
+    
+    exporter = AuditExporter(Config.DATABASE_URL)
+    
+    if format_type == "summary":
+        summary = exporter.export_summary(days=days)
+        print(f"\nCompliance Summary (last {days} days):")
+        print(f"  Total evaluations: {summary['total_evaluations']}")
+        print(f"  Blocked: {summary['blocked_actions']}")
+        print(f"  Escalated: {summary['escalated_actions']}")
+        print(f"  Block rate: {summary['block_rate']}%")
+        
+        if output:
+            import json
+            with open(output, 'w') as f:
+                json.dump(summary, f, indent=2)
+            print(f"\nSaved to: {output}")
+    
+    elif format_type == "csv":
+        csv_data = exporter.export_csv()
+        if output:
+            with open(output, 'w') as f:
+                f.write(csv_data)
+            print(f"CSV exported to: {output}")
+        else:
+            print("\nCSV Data:")
+            print(csv_data[:500] + "..." if len(csv_data) > 500 else csv_data)
+    
+    elif format_type == "json":
+        events = exporter.export_json()
+        print(f"\nExported {len(events)} events")
+        if output:
+            import json
+            with open(output, 'w') as f:
+                json.dump(events, f, indent=2, default=str)
+            print(f"Saved to: {output}")
+    
+    print("\n" + "=" * 60)
 
 
 if __name__ == "__main__":
