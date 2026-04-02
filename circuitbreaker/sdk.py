@@ -13,6 +13,7 @@ from .evaluator import RiskEvaluator
 from .audit import AuditLogger
 from .cache import PolicyCache, NullCache
 from .config import Config
+from .notifier import NotificationDispatcher
 
 
 @dataclass
@@ -50,6 +51,7 @@ class CircuitBreaker:
         self.evaluator = RiskEvaluator()
         self.audit = AuditLogger(self.database_url)
         self.cache = PolicyCache(self.redis_url, Config.REDIS_TOKEN) if self.redis_url else NullCache()
+        self.notifier = NotificationDispatcher(self.slack_webhook, Config.SLACK_BOT_TOKEN)
         
         self.config = {
             "redis_url": self.redis_url,
@@ -142,6 +144,24 @@ class CircuitBreaker:
             "result": result,
             "timestamp": time.time()
         })
+        
+        # Send notification for blocks and escalations
+        if action in ["block", "escalate"]:
+            self.notifier.send(
+                event={
+                    "request_id": request_id,
+                    "tool": tool,
+                    "params": params,
+                    "context": eval_context,
+                    "result": {
+                        "action": action,
+                        "reason": policy_result["reason"],
+                        "risk_level": risk_result["level"]
+                    },
+                    "timestamp": time.time()
+                },
+                channels=["slack", "console"]
+            )
         
         return result
     
