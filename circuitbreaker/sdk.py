@@ -14,6 +14,7 @@ from .audit import AuditLogger
 from .cache import PolicyCache, NullCache
 from .config import Config
 from .notifier import NotificationDispatcher
+from .metrics import get_metrics
 
 
 @dataclass
@@ -80,7 +81,16 @@ class CircuitBreaker:
         if cached:
             cached['execution_time_ms'] = (time.time() - start_time) * 1000
             cached['request_id'] = request_id
-            return CircuitBreakerResult(**cached)
+            
+            # Record metrics for cache hit
+            result = CircuitBreakerResult(**cached)
+            metrics = get_metrics()
+            metrics.record_evaluation(
+                result=result,
+                execution_time_ms=result.execution_time_ms,
+                cache_hit=True
+            )
+            return result
         
         # Build evaluation context
         eval_context = {
@@ -119,6 +129,14 @@ class CircuitBreaker:
             risk_level=risk_result["level"],
             request_id=request_id,
             execution_time_ms=execution_time_ms
+        )
+        
+        # Record metrics
+        metrics = get_metrics()
+        metrics.record_evaluation(
+            result=result,
+            execution_time_ms=execution_time_ms,
+            cache_hit=False
         )
         
         # Cache the result (don't cache escalations)
@@ -190,6 +208,14 @@ class CircuitBreaker:
                 return func(*args, **kwargs)
             return wrapper
         return decorator
+    
+    def get_health(self) -> Dict[str, Any]:
+        """Get health status and metrics"""
+        return get_metrics().health_check()
+    
+    def get_metrics_stats(self) -> Dict[str, Any]:
+        """Get detailed metrics"""
+        return get_metrics().get_stats()
 
 
 class CircuitBreakerBlocked(Exception):
