@@ -11,6 +11,8 @@ from .context import ExecutionContext
 from .policy import PolicyEngine
 from .evaluator import RiskEvaluator
 from .audit import AuditLogger
+from .cache import PolicyCache, NullCache
+from .config import Config
 
 
 @dataclass
@@ -38,15 +40,21 @@ class CircuitBreaker:
     ):
         self.request_id = str(uuid.uuid4())[:8]
         
+        # Use config values if not provided
+        self.redis_url = redis_url or Config.REDIS_URL
+        self.database_url = database_url or Config.DATABASE_URL
+        self.slack_webhook = slack_webhook or Config.SLACK_WEBHOOK_URL
+        
         # Initialize components
         self.policy_engine = PolicyEngine(policies_path)
         self.evaluator = RiskEvaluator()
-        self.audit = AuditLogger(database_url)
+        self.audit = AuditLogger(self.database_url)
+        self.cache = PolicyCache(self.redis_url, Config.REDIS_TOKEN) if self.redis_url else NullCache()
         
         self.config = {
-            "redis_url": redis_url,
-            "database_url": database_url,
-            "slack_webhook": slack_webhook,
+            "redis_url": self.redis_url,
+            "database_url": self.database_url,
+            "slack_webhook": self.slack_webhook,
         }
         
     def evaluate(
@@ -54,14 +62,23 @@ class CircuitBreaker:
         tool: str,
         params: Dict[str, Any],
         context: Optional[ExecutionContext] = None
-    ):
-        """Evaluate a tool call and decide: allow, block, or escalate"""
+    ) -> CircuitBreakerResult:
+        """
+        Evaluate a tool call and decide: allow, block, or escalate
+        """
         start_time = time.time()
         request_id = str(uuid.uuid4())[:8]
         
         # Create context if not provided
         if context is None:
             context = ExecutionContext()
+        
+        # Check cache first
+        cached = self.cache.get(tool, params, context.environment)
+        if cached:
+            cached['execution_time_ms'] = (time.time() - start_time) * 1000
+            cached['request_id'] = request_id
+            return CircuitBreakerResult(**cached)
         
         # Build evaluation context
         eval_context = {
@@ -102,6 +119,20 @@ class CircuitBreaker:
             execution_time_ms=execution_time_ms
         )
         
+        # Cache the result (don't cache escalations)
+        if action != "escalate":
+            self.cache.set(
+                tool=tool,
+                params=params,
+                environment=context.environment,
+                result={
+                    "allowed": allowed,
+                    "action": action,
+                    "reason": policy_result["reason"],
+                    "risk_level": risk_result["level"]
+                }
+            )
+        
         # Audit log
         self.audit.log({
             "request_id": request_id,
@@ -113,6 +144,32 @@ class CircuitBreaker:
         })
         
         return result
+    
+    def protect(self, tool: str):
+        """
+        Decorator to protect a function with CircuitBreaker
+        """
+        def decorator(func: Callable):
+            def wrapper(*args, **kwargs):
+                import inspect
+                sig = inspect.signature(func)
+                bound = sig.bind(*args, **kwargs)
+                bound.apply_defaults()
+                
+                result = self.evaluate(
+                    tool=tool,
+                    params=dict(bound.arguments)
+                )
+                
+                if not result.allowed:
+                    raise CircuitBreakerBlocked(
+                        f"Action blocked: {result.reason} "
+                        f"(risk: {result.risk_level})"
+                    )
+                
+                return func(*args, **kwargs)
+            return wrapper
+        return decorator
 
 
 class CircuitBreakerBlocked(Exception):
