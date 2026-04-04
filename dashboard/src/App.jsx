@@ -5,32 +5,79 @@ function App() {
   const [stats, setStats] = useState(null)
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     fetchStats()
     fetchEvents()
-    const interval = setInterval(fetchEvents, 5000) // Refresh every 5 seconds
+    const interval = setInterval(() => {
+      fetchStats()
+      fetchEvents()
+    }, 5000)
     return () => clearInterval(interval)
   }, [])
 
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/stats')
+      if (!response.ok) throw new Error('API not available')
       const data = await response.json()
       setStats(data)
+      setError(null)
     } catch (error) {
-      console.error('Error fetching stats:', error)
+      console.log('Stats API error:', error.message)
+      setError('API not connected - showing demo data')
+      // Demo data for display
+      setStats({
+        total_evaluations: 6,
+        blocked: 4,
+        escalated: 0,
+        allowed: 2,
+        block_rate: 66.67,
+        period: '24h'
+      })
     }
   }
 
   const fetchEvents = async () => {
     try {
       const response = await fetch('/api/events?limit=10')
+      if (!response.ok) throw new Error('API not available')
       const data = await response.json()
       setEvents(data)
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching events:', error)
+      console.log('Events API error:', error.message)
+      // Demo events for display
+      setEvents([
+        {
+          id: '1',
+          tool: 'file.delete',
+          action: 'block',
+          risk_level: 'high',
+          reason: "Policy 'No File Deletion in Production' matched",
+          environment: 'production',
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: '2',
+          tool: 'db.query',
+          action: 'block',
+          risk_level: 'critical',
+          reason: "Policy 'No DROP TABLE Statements' matched",
+          environment: 'production',
+          timestamp: new Date(Date.now() - 60000).toISOString()
+        },
+        {
+          id: '3',
+          tool: 'file.read',
+          action: 'allow',
+          risk_level: 'low',
+          reason: 'No matching policy',
+          environment: 'development',
+          timestamp: new Date(Date.now() - 120000).toISOString()
+        }
+      ])
       setLoading(false)
     }
   }
@@ -64,6 +111,12 @@ function App() {
         <h1>🛡️ CircuitBreaker Dashboard</h1>
         <p>Real-time AI Agent Protection</p>
       </header>
+
+      {error && (
+        <div className="error-banner">
+          ⚠️ {error}
+        </div>
+      )}
 
       {stats && (
         <div className="stats-grid">
