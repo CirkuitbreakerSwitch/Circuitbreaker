@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import Charts from './components/Charts'
 
 function App() {
   const [stats, setStats] = useState(null)
@@ -27,7 +28,6 @@ function App() {
     } catch (error) {
       console.log('Stats API error:', error.message)
       setError('API not connected - showing demo data')
-      // Demo data for display
       setStats({
         total_evaluations: 6,
         blocked: 4,
@@ -48,7 +48,6 @@ function App() {
       setLoading(false)
     } catch (error) {
       console.log('Events API error:', error.message)
-      // Demo events for display
       setEvents([
         {
           id: '1',
@@ -171,6 +170,8 @@ function App() {
           )}
         </div>
       </div>
+
+      <Charts />
     </div>
   )
 }
